@@ -11,6 +11,9 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
 
 # Logs and temporary run markers
 *.log

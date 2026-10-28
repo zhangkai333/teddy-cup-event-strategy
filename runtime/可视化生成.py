@@ -630,29 +630,75 @@ def bt_f5():
     return sv(fig, 'F5_月度周度热力图.png', 't3')
 
 
+ABLATION_MODELS = [
+    ('E2', '纯技术因子', '#3498DB'),
+    ('E3', '+事件 one-hot', '#2ECC71'),
+    ('E4', '+交互/排名/先验', '#E74C3C'),
+]
+
+
+def load_ablation_metrics():
+    path = _find_data(['消融实验结果'])
+    if not path:
+        public_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'docs', 'results', 'ablation_metrics.csv',
+        )
+        if os.path.exists(public_path):
+            path = public_path
+    if not path:
+        raise FileNotFoundError('未找到消融实验结果.csv')
+
+    df = pd.read_csv(path, encoding='utf-8-sig')
+    required = {'实验', '分类F1', '回归Rank_IC'}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f'消融实验结果缺少字段: {", ".join(sorted(missing))}')
+
+    experiment = df['实验'].astype(str)
+    rows = []
+    for code, label, color in ABLATION_MODELS:
+        match = df.loc[experiment.str.startswith(code)]
+        if len(match) != 1:
+            raise ValueError(f'消融实验结果中 {code} 记录数应为 1，实际为 {len(match)}')
+        row = match.iloc[0]
+        rows.append({
+            'code': code,
+            'label': label,
+            'color': color,
+            'f1': pd.to_numeric(row['分类F1'], errors='coerce'),
+            'rank_ic': pd.to_numeric(row['回归Rank_IC'], errors='coerce'),
+        })
+    return pd.DataFrame(rows)
+
+
 def abl_f1():
-    sf()
+    sf(); rows = load_ablation_metrics()
+    if rows['f1'].isna().any():
+        raise ValueError('E2/E3/E4 的 F1 指标不完整')
     fig, ax = plt.subplots(figsize=(9, 6))
-    names = ['基线\n(TF-IDF)', '+LGBM\n特征)', '+事件\none-hot', '+贝叶斯\n先验', '融合\n(S_comp)']
-    vals = [0.184, 0.421, 0.423, 0.429, 0.409]
-    clrs = ['#95A5A6','#3498DB','#2ECC71','#E74C3C','#9B59B6']
-    bars = ax.bar(names, vals, color=clrs, edgecolor='white', width=0.62, alpha=0.85)
+    names = [f"{row.code}\n{row.label}" for row in rows.itertuples()]
+    vals = rows['f1'].tolist()
+    bars = ax.bar(names, vals, color=rows['color'].tolist(), edgecolor='white', width=0.62, alpha=0.85)
     for b, v in zip(bars, vals):
-        ax.text(b.get_x()+b.get_width()/2, v+0.008, f'{v:.3f}', ha='center', fontsize=11, fontweight='bold', color='#333')
-    ax.set_ylabel('F1 Score', fontsize=12); ax.set_ylim(0, 0.52)
+        ax.text(b.get_x()+b.get_width()/2, v+0.006, f'{v:.4f}', ha='center', fontsize=11, fontweight='bold', color='#333')
+    ax.set_ylabel('Weighted F1', fontsize=12); ax.set_ylim(0, max(vals) * 1.18)
     ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
     plt.tight_layout()
     return sv(fig, 'E30_消融_F1对比.png', 't3')
 
 
 def abl_ic():
-    sf()
+    sf(); rows = load_ablation_metrics()
+    if rows['rank_ic'].isna().any():
+        raise ValueError('E2/E3/E4 的 Rank IC 指标不完整')
     fig, ax = plt.subplots(figsize=(9, 6))
-    names = ['TF-IDF\n基线', '+技术\n因子', '+事件\none-hot', '+贝叶斯\n得分', 'S_comp\n融合']
-    vals = [0.018, 0.041, 0.109, 0.118, 0.124]
-    clrs = ['#95A5A6','#3498DB','#2ECC71','#E74C3C','#9B59B6']
-    ax.bar(names, vals, color=clrs, edgecolor='white', width=0.62, alpha=0.85)
-    ax.set_ylabel('Rank_IC', fontsize=12); ax.set_ylim(0, 0.16)
+    names = [f"{row.code}\n{row.label}" for row in rows.itertuples()]
+    vals = rows['rank_ic'].tolist()
+    bars = ax.bar(names, vals, color=rows['color'].tolist(), edgecolor='white', width=0.62, alpha=0.85)
+    for b, v in zip(bars, vals):
+        ax.text(b.get_x()+b.get_width()/2, v+0.004, f'{v:.4f}', ha='center', fontsize=11, fontweight='bold', color='#333')
+    ax.set_ylabel('Rank IC', fontsize=12); ax.set_ylim(0, max(vals) * 1.18)
     ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
     plt.tight_layout()
     return sv(fig, 'E31_消融_RankIC对比.png', 't3')

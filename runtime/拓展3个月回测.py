@@ -9,6 +9,12 @@ import warnings
 import json
 import pickle
 import scipy.stats as scipy_stats
+from metrics import (
+    calc_calmar_ratio,
+    calc_max_drawdown,
+    calc_sharpe_ratio,
+    safe_parse_date,
+)
 warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,60 +26,6 @@ RESULT_DIR = os.path.join(BASE_DIR, '训练结果')
 STAGE4_DIR = os.path.join(RESULT_DIR, '5.3_事件影响预测')
 OUTPUT_DIR = os.path.join(RESULT_DIR, '5.4_投资策略构建_扩展')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# 工具函数
-def safe_parse_date(series_or_val):
-    if isinstance(series_or_val, pd.Series):
-        try:
-            result = pd.to_datetime(series_or_val.astype(int).astype(str), format='%Y%m%d', errors='coerce')
-            if result.notna().sum() > len(result) * 0.5:
-                return result
-        except:
-            pass
-        result = pd.to_datetime(series_or_val.astype(str), errors='coerce', format='mixed')
-        mask_1970 = result.dt.year == 1970
-        if mask_1970.any():
-            try:
-                result[mask_1970] = pd.to_datetime(
-                    series_or_val[mask_1970].astype(int).astype(str),
-                    format='%Y%m%d', errors='coerce'
-                )
-            except:
-                pass
-        return result
-    else:
-        return pd.to_datetime(str(series_or_val).strip(), errors='coerce')
-
-def calc_max_drawdown(nav_series):
-    if len(nav_series) < 2:
-        return 0.0, None, None
-    cumulative_max = nav_series.cummax()
-    drawdown = (nav_series - cumulative_max) / cumulative_max
-    max_dd = drawdown.min()
-    if max_dd >= 0:
-        return 0.0, None, None
-    trough_idx = drawdown.idxmin()
-    before_trough = nav_series[:trough_idx]
-    if len(before_trough) == 0:
-        peak_idx = nav_series.index[0]
-    else:
-        peak_idx = before_trough.idxmax()
-    return max_dd, peak_idx, trough_idx
-
-def calc_sharpe_ratio(weekly_returns, risk_free_rate_annual=0.015):
-    if len(weekly_returns) < 2:
-        return 0.0
-    rf_weekly = (1 + risk_free_rate_annual) ** (1/52) - 1
-    excess_returns = weekly_returns - rf_weekly
-    if excess_returns.std() < 1e-10:
-        return 0.0
-    sharpe = excess_returns.mean() / excess_returns.std() * np.sqrt(52)
-    return sharpe
-
-def calc_calmar_ratio(annual_return, max_drawdown):
-    if abs(max_drawdown) < 1e-10:
-        return 0.0
-    return annual_return / abs(max_drawdown)
 
 def refine_event_name(title, event_sub=''):
     import re

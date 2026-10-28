@@ -23,7 +23,20 @@ Push-Location $Runtime
 try {
     if (-not (Test-Path -LiteralPath $Python)) {
         Write-Host 'Creating runtime virtual environment...'
-        python -m venv .venv
+        $PyLauncher = Get-Command py -ErrorAction SilentlyContinue
+        if ($PyLauncher) {
+            & py -3.12 -m venv .venv
+        }
+        else {
+            $PythonBootstrap = Get-Command python -ErrorAction SilentlyContinue
+            if (-not $PythonBootstrap) {
+                throw 'Python 3.12 was not found. Install Python or create runtime\.venv manually.'
+            }
+            & python -m venv .venv
+        }
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Virtual environment creation failed. Python 3.12 is required.'
+        }
         $SkipInstall = $false
     }
 

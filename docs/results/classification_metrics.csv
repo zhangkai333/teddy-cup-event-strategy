@@ -1,0 +1,4 @@
+指标,数值,评估口径
+Weighted F1,0.97107,随机80/20分层验证集
+Accuracy,0.96830,随机80/20分层验证集
+模型,AHP rules + TF-IDF + Logistic Regression,事件一级分类
