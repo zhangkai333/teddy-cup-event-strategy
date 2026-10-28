@@ -1,0 +1,28 @@
+# Local datasets and generated artifacts
+/runtime/数据集_清洗/
+/runtime/补充数据_作品集/
+/runtime/训练结果/
+/runtime/实测结果/
+/runtime/结果（图表，分析）/
+
+# Python environments and caches
+.venv/
+**/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Logs and temporary run markers
+*.log
+*.exit
+
+# Local secrets and machine-specific settings
+.env
+*.local.json
+tushare_token.txt
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
